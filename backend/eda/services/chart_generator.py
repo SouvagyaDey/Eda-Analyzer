@@ -17,7 +17,6 @@ class ChartGenerator:
         self.session_dir = os.path.join(output_dir, str(session_id))
         os.makedirs(self.session_dir, exist_ok=True)
         
-        # Simple color palette
         self.colors = {
             'primary': '#3b82f6',
             'secondary': '#8b5cf6',
@@ -35,13 +34,11 @@ class ChartGenerator:
         )
     
     def _save_chart(self, fig, chart_type, column_name=None):
-
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"{chart_type}_{column_name}_{timestamp}.png" if column_name else f"{chart_type}_{timestamp}.png"
         filepath = os.path.join(self.session_dir, filename)
         
         try:
-            # Save as image
             fig.write_image(filepath, width=1200, height=700)
         
             relative_path = os.path.join('eda_outputs', str(self.session_id), filename)
@@ -70,8 +67,6 @@ class ChartGenerator:
             except Exception as e2:
                 print(f"Failed to save chart completely: {str(e2)}")
                 return None
-    
-    # Individual Column Charts
     
     def _generate_histogram(self, column):
         fig = px.histogram(
@@ -124,8 +119,6 @@ class ChartGenerator:
             )
             fig.update_layout(self._get_layout(f'Bar Chart: {column}'))
             self._save_chart(fig, 'bar_chart', column)
-    
-    # Relationship Charts
     
     def _generate_scatter_plot(self, x_col, y_col):
         fig = px.scatter(
@@ -187,12 +180,10 @@ class ChartGenerator:
         self._save_chart(fig, 'pairplot', cols_str)
     
     def _generate_missing_values_chart(self):
-        """Simple missing values chart"""
         missing = self.df.isnull().sum()
         missing = missing[missing > 0].sort_values(ascending=False)
         
         if len(missing) == 0:
-            # No missing values - create a chart showing that
             fig = go.Figure()
             fig.add_annotation(
                 text="No Missing Values Found",
@@ -216,14 +207,10 @@ class ChartGenerator:
         fig.update_layout(self._get_layout('Missing Values'))
         self._save_chart(fig, 'missing_values')
     
-    # Chart Generation Methods
-    
     def generate_all_charts(self):
-        """Generate all available charts"""
         numeric_cols = self.df.select_dtypes(include=[np.number]).columns.tolist()
         categorical_cols = self.df.select_dtypes(include=['object', 'category']).columns.tolist()
         
-        # Individual column charts
         for col in numeric_cols:
             self._generate_histogram(col)
             self._generate_boxplot(col)
@@ -232,18 +219,15 @@ class ChartGenerator:
         for col in categorical_cols:
             self._generate_bar_chart(col)
         
-        # Relationship charts
         if len(numeric_cols) >= 2:
             self._generate_correlation_heatmap(numeric_cols)
             self._generate_pairplot(numeric_cols)
         
-        # Missing values
         self._generate_missing_values_chart()
         
         return self.charts
     
     def generate_essential_charts_for_ai(self, chart_types):
-        """Generate essential charts for AI analysis"""
         numeric_cols = self.df.select_dtypes(include=[np.number]).columns.tolist()
         
         for chart_type in chart_types:
@@ -258,15 +242,46 @@ class ChartGenerator:
         
         return self.charts
     
+    def generate_intelligent_charts_for_ai(self, summary):
+        """
+        Generate meaningful charts based on data characteristics for AI insights.
+        Intelligently selects which distribution plots and charts are most valuable.
+        """
+        numeric_cols = self.df.select_dtypes(include=[np.number]).columns.tolist()
+        categorical_cols = self.df.select_dtypes(include=['object', 'category']).columns.tolist()
+        
+        # Always generate missing values chart
+        self._generate_missing_values_chart()
+        
+        # Generate correlation heatmap if we have multiple numeric columns
+        if len(numeric_cols) >= 2:
+            self._generate_correlation_heatmap(numeric_cols)
+        
+        # Generate distribution plots for ALL numeric columns (or top 6 if many)
+        # This ensures Gemini sees distributions for all features, not just the first one
+        cols_to_plot = numeric_cols[:6] if len(numeric_cols) > 6 else numeric_cols
+        for col in cols_to_plot:
+            self._generate_distribution_plot(col)
+        
+        # Generate bar charts for categorical columns with reasonable cardinality
+        for col in categorical_cols[:3]:  # Limit to 3 categorical charts
+            unique_count = self.df[col].nunique()
+            if 2 <= unique_count <= 20:  # Only if reasonable number of categories
+                self._generate_bar_chart(col)
+        
+        # Generate pairplot only if we have 2-5 numeric columns (too many becomes messy)
+        if 2 <= len(numeric_cols) <= 5:
+            self._generate_pairplot(numeric_cols)
+        
+        return self.charts
+    
     def generate_on_demand_charts(self, x_axis=None, y_axis=None, chart_types=None):
-        """Generate charts based on user selection"""
         if not chart_types or chart_types == ['all']:
             chart_types = self._get_all_possible_chart_types(x_axis, y_axis)
         
         numeric_cols = self.df.select_dtypes(include=[np.number]).columns.tolist()
         col = x_axis or y_axis
         
-        # Chart generation mapping
         chart_handlers = {
             'scatter': lambda: self._generate_scatter_plot(x_axis, y_axis) if x_axis and y_axis else None,
             'line': lambda: self._generate_line_plot(x_axis, y_axis) if x_axis and y_axis else None,
@@ -287,11 +302,9 @@ class ChartGenerator:
         return self.charts
     
     def _get_all_possible_chart_types(self, x_axis, y_axis):
-        """Get ALL possible chart types for given axes"""
         chart_types = []
         numeric_cols = self.df.select_dtypes(include=[np.number]).columns.tolist()
         
-        # If both axes are None, return only overview charts
         if not x_axis and not y_axis:
             if len(numeric_cols) >= 2:
                 chart_types = ['correlation_heatmap', 'pairplot']
@@ -299,42 +312,29 @@ class ChartGenerator:
             return chart_types
         
         if x_axis and y_axis:
-            # Two columns selected
             x_numeric = pd.api.types.is_numeric_dtype(self.df[x_axis])
             y_numeric = pd.api.types.is_numeric_dtype(self.df[y_axis])
             
             if x_numeric and y_numeric:
-                # Both numeric: scatter, line, and bar chart
                 chart_types = ['scatter', 'line', 'bar_chart']
             elif x_numeric or y_numeric:
-                # One numeric, one categorical: bar chart
                 chart_types = ['bar_chart']
             else:
-                # Both categorical: grouped bar chart
                 chart_types = ['bar_chart']
                 
         elif x_axis or y_axis:
-            # Single column selected
             col = x_axis or y_axis
             
             if pd.api.types.is_numeric_dtype(self.df[col]):
-                # Numeric column: ALL univariate plots only
                 chart_types = ['histogram', 'boxplot', 'distribution']
             else:
-                # Categorical column: bar chart only
                 chart_types = ['bar_chart']
         
-        # Always include missing values chart as an option
         chart_types.append('missing_values')
         
         return chart_types
     
     def get_available_chart_types(self, x_axis=None, y_axis=None):
-        """Get list of available chart types for given axes (for frontend to display options)
-        
-        Returns:
-            dict with 'chart_types' list and 'descriptions' dict
-        """
         chart_types = self._get_all_possible_chart_types(x_axis, y_axis)
         
         descriptions = {
@@ -343,7 +343,7 @@ class ChartGenerator:
             'bar_chart': 'Bar Chart - Shows distribution of categorical data or comparison',
             'histogram': 'Histogram - Shows frequency distribution of numeric data',
             'boxplot': 'Box Plot - Shows quartiles and outliers of numeric data',
-            'distribution': 'Distribution Plot - Shows probability distribution with histogram',
+            'distribution': 'Distribution Plot - Shows probability distribution of numeric data',
             'correlation_heatmap': 'Correlation Heatmap - Shows correlations between all numeric variables',
             'pairplot': 'Pair Plot - Shows pairwise relationships between numeric variables',
             'missing_values': 'Missing Values - Shows missing data across all columns'

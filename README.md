@@ -111,7 +111,7 @@ The backend will be available at `http://localhost:8000`
 
 The frontend will be available at `http://localhost:3000` (Vite default port)
 
-## 🎯 Usage
+## Usage
 
 1. **Open the application** in your browser at `http://localhost:3000`
 
@@ -123,7 +123,7 @@ The frontend will be available at `http://localhost:3000` (Vite default port)
 
 5. **Download charts** using the download button on each chart
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 eda-analyzer/

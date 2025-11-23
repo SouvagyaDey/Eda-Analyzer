@@ -37,9 +37,27 @@ class AiInsightsGenerator:
             return self._fallback_insights(df, summary)
 
     def _short_prompt(self, data_summary: str, chart_paths: List[Dict[str, str]]):
-        chart_list = "\n".join([
-            f"- {c['type']} : {c.get('column','')}" for c in chart_paths
-        ]) if chart_paths else "No charts provided."
+        # Group charts by type for better organization
+        distributions = [c for c in chart_paths if c['type'] == 'distribution']
+        correlations = [c for c in chart_paths if c['type'] == 'correlation_heatmap']
+        categoricals = [c for c in chart_paths if c['type'] == 'bar_chart']
+        others = [c for c in chart_paths if c['type'] not in ['distribution', 'correlation_heatmap', 'bar_chart']]
+        
+        chart_list = []
+        if distributions:
+            chart_list.append("\n**Distribution Plots:**")
+            chart_list.extend([f"- Distribution of {c.get('column','')}" for c in distributions])
+        if correlations:
+            chart_list.append("\n**Correlation Analysis:**")
+            chart_list.extend([f"- {c['type']}" for c in correlations])
+        if categoricals:
+            chart_list.append("\n**Categorical Analysis:**")
+            chart_list.extend([f"- Bar chart: {c.get('column','')}" for c in categoricals])
+        if others:
+            chart_list.append("\n**Other Charts:**")
+            chart_list.extend([f"- {c['type']} : {c.get('column','')}" for c in others])
+        
+        chart_list_str = "\n".join(chart_list) if chart_list else "No charts provided."
 
         return f"""
 You are a senior data analyst. Analyze the dataset summary and the charts provided.
@@ -47,16 +65,23 @@ Your output must be structured, concise, and highly actionable.
 
 ## 1) High-Level Overview
 - Summarize rows, columns, missing values, duplicates, numeric vs categorical counts.
-- Mention 3–5 strong early insights.
+- Mention 3–5 strong early insights from the data.
 
 ## 2) Chart-Based Interpretations
-For each chart below, describe:
-- What patterns you see
-- Distribution shapes, outliers, imbalance, skewness
-- Any correlations or anomalies
+Analyze the distribution plots and other charts provided. For EACH distribution chart, describe:
+- Shape (normal, skewed left/right, bimodal, uniform)
+- Outliers or unusual patterns
+- Data range and concentration
+- Missing values or data quality issues
+- Business/practical implications of the distribution
+
+For correlation heatmap and other charts:
+- Strong positive/negative correlations
+- Unexpected patterns or anomalies
+- Multicollinearity concerns
 
 ### Charts Provided:
-{chart_list}
+{chart_list_str}
 
 ## 3) Feature-vs-Feature Plot Order (VERY IMPORTANT)
 List the exact order in which the next plots should be generated:

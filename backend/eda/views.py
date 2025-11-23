@@ -115,8 +115,6 @@ class AiInsightsView(APIView):
             cleaned_df = processor.clean_data()
             summary = processor.get_summary()
             
-            recommended_charts = ['missing_values', 'correlation_heatmap', 'distribution', 'pairplot']
-            
             chart_generator = ChartGenerator(
                 cleaned_df,
                 session.session_id,
@@ -124,7 +122,8 @@ class AiInsightsView(APIView):
                 theme='light'
             )
             
-            chart_paths = chart_generator.generate_essential_charts_for_ai(recommended_charts)
+            # Generate comprehensive charts for AI analysis
+            chart_paths = chart_generator.generate_intelligent_charts_for_ai(summary)
             
             for chart_info in chart_paths:
                 EdaChart.objects.get_or_create(
