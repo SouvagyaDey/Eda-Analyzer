@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSessionDetail, getAiInsights, getColumnInfo, generateOnDemandCharts } from '../utils/api';
-import { Sparkles, ArrowLeft, Table, BarChart, Download, Loader, Trash2, Grid, List, Maximize2, X } from 'lucide-react';
+import { Sparkles, ArrowLeft, Table, BarChart, Download, Loader, Trash2, List, Maximize2, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -560,7 +560,7 @@ const Dashboard = () => {
                                 alt={formatChartTitle(chart.chart_type, chart.column_name)}
                                 className="thumbnail-img"
                                 onError={(e) => {
-                                  e.target.style.display = 'none';
+                                  console.error('Failed to load thumbnail:', getChartUrl(chart));
                                   e.target.parentElement.classList.add('error');
                                 }}
                               />
@@ -625,17 +625,6 @@ const Dashboard = () => {
               <>
                 <div className="chart-view-modern fade-in">
                   <div className="chart-view-header-modern">
-                    <button 
-                      onClick={() => {
-                        setSelectedChart(null);
-                        setActiveTab('library');
-                      }} 
-                      className="back-btn-modern"
-                      style={{marginRight: '16px'}}
-                    >
-                      <ArrowLeft size={20} />
-                      <span>Back to Library</span>
-                    </button>
                     <div className="chart-header-left">
                       <div className="chart-type-badge">{selectedChart.chart_type}</div>
                       <h2 className="chart-title">{formatChartTitle(selectedChart.chart_type, selectedChart.column_name)}</h2>

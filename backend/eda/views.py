@@ -134,6 +134,26 @@ class AiInsightsView(APIView):
                 )
             
             ai_generator = AiInsightsGenerator(settings.GEMINI_API_KEY)
+            
+            # Let AI select the best columns for pairplot
+            numeric_cols = cleaned_df.select_dtypes(include=['number']).columns.tolist()
+            if len(numeric_cols) >= 2:
+                selected_cols = ai_generator.select_pairplot_columns(cleaned_df, summary)
+                print(f"AI selected columns for pairplot: {selected_cols}")
+                
+                # Generate pairplot with AI-selected columns
+                chart_generator._generate_pairplot(selected_cols)
+                
+                # Save the pairplot chart
+                if chart_generator.charts:
+                    latest_chart = chart_generator.charts[-1]
+                    EdaChart.objects.get_or_create(
+                        session=session,
+                        chart_type=latest_chart['type'],
+                        chart_path=latest_chart['path'],
+                        defaults={'column_name': latest_chart.get('column')}
+                    )
+            
             insights = ai_generator.generate_insights(cleaned_df, summary, chart_paths)
             
             session.insights = insights

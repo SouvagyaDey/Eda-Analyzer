@@ -269,9 +269,7 @@ class ChartGenerator:
             if 2 <= unique_count <= 20:  # Only if reasonable number of categories
                 self._generate_bar_chart(col)
         
-        # Generate pairplot only if we have 2-5 numeric columns (too many becomes messy)
-        if 2 <= len(numeric_cols) <= 5:
-            self._generate_pairplot(numeric_cols)
+        # Note: Pairplot will be generated separately by AI column selection
         
         return self.charts
     

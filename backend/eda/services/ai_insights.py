@@ -36,6 +36,67 @@ class AiInsightsGenerator:
             print("AI Error → fallback:", e)
             return self._fallback_insights(df, summary)
 
+    def select_pairplot_columns(self, df: pd.DataFrame, summary: Dict[str, Any]) -> List[str]:
+        """Ask Gemini to select the most important 3-5 numeric columns for pairplot analysis"""
+        if not self.model:
+            # Fallback: return first 5 numeric columns
+            numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+            return numeric_cols[:5]
+        
+        try:
+            numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+            if len(numeric_cols) < 2:
+                return numeric_cols
+            
+            # Create prompt for column selection
+            prompt = f"""You are a data analysis expert. Given this dataset summary, select the 3-5 MOST IMPORTANT numeric columns for a pairplot analysis.
+
+Dataset Summary:
+- Total numeric columns: {len(numeric_cols)}
+- Column names: {', '.join(numeric_cols)}
+- Dataset info: {summary.get('total_rows', 0)} rows, {summary.get('total_columns', 0)} columns
+
+Available numeric columns with statistics:
+"""
+            for col in numeric_cols:
+                col_stats = summary.get('columns', {}).get(col, {})
+                prompt += f"\n- {col}: mean={col_stats.get('mean', 'N/A')}, std={col_stats.get('std', 'N/A')}, missing={col_stats.get('missing', 0)}"
+            
+            prompt += """
+
+Instructions:
+1. Select 3-5 columns that would reveal the MOST interesting relationships
+2. Prioritize columns with high variance and potential correlations
+3. Avoid highly correlated redundant columns
+4. Consider columns that might be key features or target variables
+
+Return ONLY a comma-separated list of column names, nothing else.
+Example: column1, column2, column3"""
+
+            response = self.model.generate_content(prompt)
+            selected_text = response.text.strip()
+            
+            # Parse the response
+            selected_cols = [col.strip() for col in selected_text.split(',')]
+            
+            # Validate and filter
+            valid_cols = [col for col in selected_cols if col in numeric_cols]
+            
+            # Return 3-5 columns, fallback if needed
+            if 2 <= len(valid_cols) <= 5:
+                return valid_cols
+            elif len(valid_cols) > 5:
+                return valid_cols[:5]
+            else:
+                # Fallback to first 5 if AI response is invalid
+                return numeric_cols[:5]
+                
+        except Exception as e:
+            print(f"Error in AI column selection: {e}")
+            # Fallback: return first 5 numeric columns
+            numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+            return numeric_cols[:5]
+
     def _short_prompt(self, data_summary: str, chart_paths: List[Dict[str, str]]):
         # Group charts by type for better organization
         distributions = [c for c in chart_paths if c['type'] == 'distribution']
