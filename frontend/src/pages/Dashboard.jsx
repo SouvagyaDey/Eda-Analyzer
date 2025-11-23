@@ -89,23 +89,45 @@ const Dashboard = () => {
       return;
     }
 
+    // Check if "All Columns" is selected
+    const isAllX = x === '__all__';
+    const isAllY = y === '__all__';
+    
+    const numericCount = columnInfo?.numeric_columns?.length || 0;
+    
+    let plots = [];
+
+    // If "All Columns" is selected, show only overview plots
+    if (isAllX || isAllY) {
+      plots = [];
+      if (numericCount >= 2) {
+        plots.push(
+          { id: 'correlation_heatmap', name: 'Correlation Heatmap' },
+          { id: 'pairplot', name: 'Pair Plot' }
+        );
+      }
+      // Always add Missing Values for overview
+      plots.push({ id: 'missing_values', name: 'Missing Values' });
+      
+      setAvailablePlots(plots);
+      setSelectedPlots(plots.map(p => p.id));
+      return;
+    }
+
     const xCol = columnInfo?.columns.find(c => c.name === x);
     const yCol = columnInfo?.columns.find(c => c.name === y);
     
     const xIsNumeric = xCol?.type === 'numeric';
     const yIsNumeric = yCol?.type === 'numeric';
-    const xIsCategorical = xCol?.type === 'categorical';
-    const yIsCategorical = yCol?.type === 'categorical';
-
-    let plots = [];
 
     if (x && y) {
       // Both axes selected
       if (xIsNumeric && yIsNumeric) {
-        // Numeric x Numeric: scatter, line
+        // Numeric x Numeric: scatter, line, and bar chart
         plots = [
           { id: 'scatter', name: 'Scatter Plot' },
-          { id: 'line', name: 'Line Plot' }
+          { id: 'line', name: 'Line Plot' },
+          { id: 'bar_chart', name: 'Bar Chart' }
         ];
       } else {
         // Any categorical: bar chart
@@ -117,7 +139,7 @@ const Dashboard = () => {
       // Single axis selected
       const col = xCol || yCol;
       if (col?.type === 'numeric') {
-        // Single numeric: histogram, boxplot, distribution
+        // Single numeric: histogram, boxplot, distribution only
         plots = [
           { id: 'histogram', name: 'Histogram' },
           { id: 'boxplot', name: 'Box Plot' },
@@ -176,12 +198,21 @@ const Dashboard = () => {
       setError(null);
       setSuccessMessage(null);
       
+      // Convert "__all__" to null for backend
+      const xAxisValue = xAxis === '__all__' ? null : xAxis;
+      const yAxisValue = yAxis === '__all__' ? null : yAxis;
+      
+      // Filter selectedPlots to only include plots that are currently available
+      const validPlots = selectedPlots.filter(plot => 
+        availablePlots.some(ap => ap.id === plot)
+      );
+      
       // Send 'all' to backend to generate ALL possible plots
       const result = await generateOnDemandCharts(
         sessionId,
-        xAxis || null,
-        yAxis || null,
-        selectedPlots.length === availablePlots.length ? ['all'] : selectedPlots, // If all selected, send ['all']
+        xAxisValue || null,
+        yAxisValue || null,
+        validPlots.length === availablePlots.length ? ['all'] : validPlots, // If all selected, send ['all']
         theme
       );
 
@@ -368,6 +399,7 @@ const Dashboard = () => {
                       disabled={generating}
                     >
                       <option value="">-- None --</option>
+                      <option value="__all__">📊 All Columns (Overview)</option>
                       {columnInfo.columns.map((col) => (
                         <option key={col.name} value={col.name}>
                           {col.name} ({col.type})
@@ -386,6 +418,7 @@ const Dashboard = () => {
                       disabled={generating}
                     >
                       <option value="">-- None --</option>
+                      <option value="__all__">📊 All Columns (Overview)</option>
                       {columnInfo.columns.map((col) => (
                         <option key={col.name} value={col.name}>
                           {col.name} ({col.type})
@@ -412,6 +445,9 @@ const Dashboard = () => {
                             />
                             <span className="plot-type-name">
                               {plot.name}
+                              {(plot.id === 'correlation_heatmap' || plot.id === 'pairplot' || plot.id === 'missing_values') && 
+                                <span className="plot-info-icon">ⓘ</span>
+                              }
                             </span>
                           </label>
                         ))}
@@ -589,6 +625,17 @@ const Dashboard = () => {
               <>
                 <div className="chart-view-modern fade-in">
                   <div className="chart-view-header-modern">
+                    <button 
+                      onClick={() => {
+                        setSelectedChart(null);
+                        setActiveTab('library');
+                      }} 
+                      className="back-btn-modern"
+                      style={{marginRight: '16px'}}
+                    >
+                      <ArrowLeft size={20} />
+                      <span>Back to Library</span>
+                    </button>
                     <div className="chart-header-left">
                       <div className="chart-type-badge">{selectedChart.chart_type}</div>
                       <h2 className="chart-title">{formatChartTitle(selectedChart.chart_type, selectedChart.column_name)}</h2>
@@ -669,6 +716,14 @@ const Dashboard = () => {
                 {insights ? (
                   <div className="insights-card-modern">
                     <div className="insights-header-modern">
+                      <button 
+                        onClick={() => setActiveTab('library')} 
+                        className="back-btn-modern"
+                        style={{marginBottom: '16px'}}
+                      >
+                        <ArrowLeft size={20} />
+                        <span>Back to Library</span>
+                      </button>
                       <div className="insights-icon-wrapper">
                         <Sparkles size={24} />
                       </div>
@@ -710,12 +765,6 @@ const Dashboard = () => {
               <div className="empty-state">
                 <BarChart size={64} />
                 <p>Select a chart from the sidebar</p>
-                {session.charts && session.charts.length === 0 && (
-                  <button onClick={() => navigate('/')} className="btn btn-primary">
-                    <ArrowLeft size={18} />
-                    Back to Home
-                  </button>
-                )}
               </div>
             )}
           </div>
@@ -730,12 +779,16 @@ const formatChartTitle = (chartType, columnName) => {
   const typeMap = {
     histogram: 'Histogram',
     bar: 'Bar Chart',
+    bar_chart: 'Bar Chart',
     correlation: 'Correlation Heatmap',
+    correlation_heatmap: 'Correlation Heatmap',
     pairplot: 'Pair Plot',
     boxplot: 'Box Plot',
     missing: 'Missing Values',
+    missing_values: 'Missing Values',
     scatter: 'Scatter Plot',
     distribution: 'Distribution Plot',
+    line: 'Line Plot',
   };
 
   const title = typeMap[chartType] || chartType;

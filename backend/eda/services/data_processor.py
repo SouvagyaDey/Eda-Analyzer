@@ -4,14 +4,12 @@ from typing import Dict, Any
 
 
 class DataProcessor:
-    """Handle data preprocessing and cleaning"""
     
     def __init__(self, dataframe: pd.DataFrame):
         self.df = dataframe.copy()
         self.original_df = dataframe.copy()
     
     def clean_data(self) -> pd.DataFrame:
-        """Clean and preprocess the dataframe"""
         
         # Normalize column names
         self.df.columns = [col.strip().replace(' ', '_').lower() for col in self.df.columns]
@@ -25,7 +23,7 @@ class DataProcessor:
         return self.df
     
     def _infer_types(self) -> pd.DataFrame:
-        """Infer and convert appropriate data types"""
+
         df = self.df.copy()
         
         for col in df.columns:
@@ -48,7 +46,6 @@ class DataProcessor:
         return df
     
     def _handle_missing_values(self) -> pd.DataFrame:
-        """Handle missing values based on column type"""
         df = self.df.copy()
         
         for col in df.columns:
@@ -67,7 +64,6 @@ class DataProcessor:
         return df
     
     def get_summary(self) -> Dict[str, Any]:
-        """Generate comprehensive data summary"""
         
         summary = {
             'shape': {
