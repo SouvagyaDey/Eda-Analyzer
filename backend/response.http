@@ -1,0 +1,179 @@
+### EDA Analyzer API Testing
+### Base URL
+@baseUrl = http://localhost:8000/api
+@sessionId = 94617db8-91e8-4108-8a1a-fcdd73528615
+
+### 1. Upload CSV File
+POST {{baseUrl}}/upload_csv/
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test.csv"
+Content-Type: text/csv
+
+name,age,city
+John,25,NYC
+Jane,30,LA
+Bob,35,Chicago
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 2. Get All Sessions
+GET {{baseUrl}}/sessions/
+Accept: application/json
+
+### 3. Get Session Detail
+GET {{baseUrl}}/sessions/{{sessionId}}/
+Accept: application/json
+
+### 4. Get EDA Charts for Session
+GET {{baseUrl}}/eda_charts/{{sessionId}}/
+Accept: application/json
+
+### 5. Get AI Insights for Session
+GET {{baseUrl}}/ai_insights/{{sessionId}}/
+Accept: application/json
+
+### 6. Get Column Information
+GET {{baseUrl}}/columns/{{sessionId}}/
+Accept: application/json
+
+### 7. Generate Custom Charts
+POST {{baseUrl}}/generate_charts/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "chart_type": "scatter",
+  "x_column": "age",
+  "y_column": "salary",
+  "title": "Age vs Salary"
+}
+
+### 8. Generate On-Demand Charts
+POST {{baseUrl}}/generate_on_demand/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "prompt": "Show me a correlation heatmap of all numeric columns"
+}
+
+### 9. Delete Session
+DELETE {{baseUrl}}/sessions/{{sessionId}}/
+Accept: application/json
+
+### Upload IRIS Dataset
+POST {{baseUrl}}/upload_csv/
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="IRIS.csv"
+Content-Type: text/csv
+
+< ../media/uploads/IRIS.csv
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Upload Heart Dataset
+POST {{baseUrl}}/upload_csv/
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="heart.csv"
+Content-Type: text/csv
+
+< ../media/uploads/heart.csv
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+
+### Generate Bar Chart
+POST {{baseUrl}}/generate_charts/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "chart_type": "bar",
+  "x_column": "category",
+  "y_column": "count",
+  "title": "Category Distribution"
+}
+
+
+POST {{baseUrl}}/generate_charts/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "chart_type": "line",
+  "x_column": "date",
+  "y_column": "value",
+  "title": "Trend Over Time"
+}
+
+### Generate Box Plot
+POST {{baseUrl}}/generate_charts/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "chart_type": "box",
+  "x_column": "group",
+  "y_column": "score",
+  "title": "Score Distribution by Group"
+}
+
+### Generate Histogram
+POST {{baseUrl}}/generate_charts/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "chart_type": "histogram",
+  "x_column": "age",
+  "title": "Age Distribution"
+}
+
+###############################################
+### AI-Powered Chart Generation
+###############################################
+
+### Generate Chart from Natural Language - Correlation
+POST {{baseUrl}}/generate_on_demand/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "prompt": "Create a correlation matrix showing relationships between all numeric variables"
+}
+
+### Generate Chart from Natural Language - Distribution
+POST {{baseUrl}}/generate_on_demand/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "prompt": "Show me the distribution of the target variable"
+}
+
+### Generate Chart from Natural Language - Comparison
+POST {{baseUrl}}/generate_on_demand/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "prompt": "Compare the average values across different categories"
+}
+
+
+
+### Test Invalid Session ID
+GET {{baseUrl}}/sessions/00000000-0000-0000-0000-000000000000/
+Accept: application/json
+
+### Test Invalid Chart Type
+POST {{baseUrl}}/generate_charts/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "chart_type": "invalid_type",
+  "x_column": "col1",
+  "y_column": "col2"
+}
+
+### Test Missing Required Fields
+POST {{baseUrl}}/generate_charts/{{sessionId}}/
+Content-Type: application/json
+
+{
+  "chart_type": "scatter"
+}

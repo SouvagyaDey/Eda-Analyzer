@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any
 
-
 class DataProcessor:
     
     def __init__(self, dataframe: pd.DataFrame):
@@ -10,35 +9,27 @@ class DataProcessor:
         self.original_df = dataframe.copy()
     
     def clean_data(self) -> pd.DataFrame:
-
         self.df.columns = [col.strip().replace(' ', '_').lower() for col in self.df.columns]
-        
-
         self.df = self._infer_types()
-        
-
         self.df = self._handle_missing_values()
         
         return self.df
     
     def _infer_types(self) -> pd.DataFrame:
-
         df = self.df.copy()
         
         for col in df.columns:
             try:
                 numeric_col = pd.to_numeric(df[col], errors='coerce')
-
                 if not numeric_col.isna().all():
-                    df[col] = pd.to_numeric(df[col], errors='ignore')
+                    df[col] = numeric_col
             except:
                 pass
             
-
             if df[col].dtype == 'object':
                 try:
-                    df[col] = pd.to_datetime(df[col], errors='ignore')
-                except:
+                    df[col] = pd.to_datetime(df[col])
+                except (ValueError, TypeError):
                     pass
         
         return df
@@ -50,10 +41,8 @@ class DataProcessor:
             missing_count = df[col].isnull().sum()
             if missing_count > 0:
                 if pd.api.types.is_numeric_dtype(df[col]):
-
                     df[col].fillna(df[col].median(), inplace=True)
                 else:
- 
                     if not df[col].mode().empty:
                         df[col].fillna(df[col].mode()[0], inplace=True)
                     else:
@@ -100,7 +89,6 @@ class DataProcessor:
                 }
                 summary['datetime_columns'].append(col)
             else:
-                # Categorical
                 value_counts = self.df[col].value_counts().head(5).to_dict()
                 col_info['top_values'] = {str(k): int(v) for k, v in value_counts.items()}
                 summary['categorical_columns'].append(col)
@@ -113,7 +101,6 @@ class DataProcessor:
         return summary
     
     def detect_outliers(self, column: str) -> pd.Series:
-
         if not pd.api.types.is_numeric_dtype(self.df[column]):
             return pd.Series([False] * len(self.df))
         

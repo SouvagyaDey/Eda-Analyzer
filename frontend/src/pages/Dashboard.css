@@ -972,13 +972,7 @@
   gap: 4px;
 }
 
-.plot-info-icon {
-  display: inline-block;
-  font-size: 10px;
-  color: var(--primary-color);
-  opacity: 0.7;
-  font-weight: bold;
-}
+
 
 .sidebar-section {
   margin-bottom: 12px;

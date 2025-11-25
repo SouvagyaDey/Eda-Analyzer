@@ -4,9 +4,7 @@ from typing import Dict, List, Any
 from pathlib import Path
 
 class AiInsightsGenerator:
-    """
-    Lightweight, clean, short-prompt EDA insights generator using Gemini 2.0 Flash with Vision.
-    """
+ 
 
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -16,7 +14,6 @@ class AiInsightsGenerator:
         else:
             self.model = None
 
-    # MAIN METHOD
     def generate_insights(self, df: pd.DataFrame, summary: Dict[str, Any], chart_paths: List[Dict[str, str]] = None) -> str:
         if not self.model:
             print("Gemini API not configured → using fallback insights.")
@@ -33,13 +30,12 @@ class AiInsightsGenerator:
             return response.text
 
         except Exception as e:
-            print("AI Error → fallback:", e)
+            print("AI Error fallback:", e)
             return self._fallback_insights(df, summary)
 
     def select_pairplot_columns(self, df: pd.DataFrame, summary: Dict[str, Any]) -> List[str]:
         """Ask Gemini to select the most important 3-5 numeric columns for pairplot analysis"""
         if not self.model:
-            # Fallback: return first 5 numeric columns
             numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
             return numeric_cols[:5]
         
@@ -48,7 +44,6 @@ class AiInsightsGenerator:
             if len(numeric_cols) < 2:
                 return numeric_cols
             
-            # Create prompt for column selection
             prompt = f"""You are a data analysis expert. Given this dataset summary, select the 3-5 MOST IMPORTANT numeric columns for a pairplot analysis.
 
 Dataset Summary:
@@ -76,29 +71,23 @@ Example: column1, column2, column3"""
             response = self.model.generate_content(prompt)
             selected_text = response.text.strip()
             
-            # Parse the response
             selected_cols = [col.strip() for col in selected_text.split(',')]
             
-            # Validate and filter
             valid_cols = [col for col in selected_cols if col in numeric_cols]
             
-            # Return 3-5 columns, fallback if needed
             if 2 <= len(valid_cols) <= 5:
                 return valid_cols
             elif len(valid_cols) > 5:
                 return valid_cols[:5]
             else:
-                # Fallback to first 5 if AI response is invalid
                 return numeric_cols[:5]
                 
         except Exception as e:
             print(f"Error in AI column selection: {e}")
-            # Fallback: return first 5 numeric columns
             numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
             return numeric_cols[:5]
 
     def _short_prompt(self, data_summary: str, chart_paths: List[Dict[str, str]]):
-        # Group charts by type for better organization
         distributions = [c for c in chart_paths if c['type'] == 'distribution']
         correlations = [c for c in chart_paths if c['type'] == 'correlation_heatmap']
         categoricals = [c for c in chart_paths if c['type'] == 'bar_chart']
@@ -173,7 +162,6 @@ Keep the analysis sharp, helpful, and easy to understand.
 ### Dataset Summary
 {data_summary}
 """
-    # COMPACT DATA SUMMARY
 
     def _compact_summary(self, summary: Dict[str, Any]) -> str:
         rows = summary['shape']['rows']
@@ -198,27 +186,20 @@ Keep the analysis sharp, helpful, and easy to understand.
 
         return "\n".join(out)
 
-    # LOAD IMAGES
     def _load_images(self, chart_paths: List[Dict[str, str]]):
-        """
-        Load EDA chart images from eda_outputs/ folder (not media/).
-        Handles absolute paths reliably so Gemini receives the image.
-        """
+
         if not chart_paths:
             return []
 
         imgs = []
 
-        # Locate project root
-        project_root = Path(__file__).resolve().parent.parent  # adjust if needed
+        project_root = Path(__file__).resolve().parent.parent
         eda_root = project_root / "eda_outputs"
 
         for chart in chart_paths:
             try:
-                # Paths stored like: "eda_outputs/session/file.png"
                 relative_path = chart["path"]
 
-                # Make absolute path
                 abs_path = project_root / relative_path
 
                 if not abs_path.exists():
@@ -235,7 +216,6 @@ Keep the analysis sharp, helpful, and easy to understand.
 
         return imgs
 
-    # FALLBACK ANALYSIS (SHORT)
     def _fallback_insights(self, df: pd.DataFrame, summary: Dict[str, Any]):
         return f"""
 # Fallback Insights (AI Disabled)

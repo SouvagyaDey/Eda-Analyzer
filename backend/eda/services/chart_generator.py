@@ -40,7 +40,6 @@ class ChartGenerator:
         
         try:
             fig.write_image(filepath, width=1200, height=700)
-        
             relative_path = os.path.join('eda_outputs', str(self.session_id), filename)
             self.charts.append({
                 'type': chart_type,
@@ -227,51 +226,70 @@ class ChartGenerator:
         
         return self.charts
     
-    def generate_essential_charts_for_ai(self, chart_types):
-        numeric_cols = self.df.select_dtypes(include=[np.number]).columns.tolist()
+    # def generate_essential_charts_for_ai(self, chart_types):
+    #     numeric_cols = self.df.select_dtypes(include=[np.number]).columns.tolist()
         
-        for chart_type in chart_types:
-            if chart_type == 'missing_values':
-                self._generate_missing_values_chart()
-            elif chart_type == 'correlation_heatmap' and len(numeric_cols) >= 2:
-                self._generate_correlation_heatmap(numeric_cols)
-            elif chart_type == 'distribution' and len(numeric_cols) > 0:
-                self._generate_distribution_plot(numeric_cols[0])
-            elif chart_type == 'pairplot' and len(numeric_cols) >= 2:
-                self._generate_pairplot(numeric_cols)
+    #     for chart_type in chart_types:
+    #         if chart_type == 'missing_values':
+    #             self._generate_missing_values_chart()
+    #         elif chart_type == 'correlation_heatmap' and len(numeric_cols) >= 2:
+    #             self._generate_correlation_heatmap(numeric_cols)
+    #         elif chart_type == 'distribution' and len(numeric_cols) > 0:
+    #             self._generate_distribution_plot(numeric_cols[0])
+    #         elif chart_type == 'pairplot' and len(numeric_cols) >= 2:
+    #             self._generate_pairplot(numeric_cols)
         
-        return self.charts
+    #     return self.charts
     
     def generate_intelligent_charts_for_ai(self, summary):
-        """
-        Generate meaningful charts based on data characteristics for AI insights.
-        Intelligently selects which distribution plots and charts are most valuable.
-        """
-        numeric_cols = self.df.select_dtypes(include=[np.number]).columns.tolist()
-        categorical_cols = self.df.select_dtypes(include=['object', 'category']).columns.tolist()
-        
-        # Always generate missing values chart
+
+        total_rows = summary["shape"]["rows"]
+        columns_info = summary["columns"]
+
+        numeric_cols = summary.get("numeric_columns", [])
+        categorical_cols = summary.get("categorical_columns", [])
+        datetime_cols = summary.get("datetime_columns", [])
+
+
         self._generate_missing_values_chart()
-        
-        # Generate correlation heatmap if we have multiple numeric columns
+
         if len(numeric_cols) >= 2:
             self._generate_correlation_heatmap(numeric_cols)
-        
-        # Generate distribution plots for ALL numeric columns (or top 6 if many)
-        # This ensures Gemini sees distributions for all features, not just the first one
-        cols_to_plot = numeric_cols[:6] if len(numeric_cols) > 6 else numeric_cols
-        for col in cols_to_plot:
+
+        for col_info in columns_info:
+            col = col_info["name"]
+            
+            if col not in numeric_cols:
+                continue
+
+            if col_info["missing"] > 0.4 * total_rows:
+                continue
+
+            if col_info["unique"] < 5:
+                continue
+            
             self._generate_distribution_plot(col)
-        
-        # Generate bar charts for categorical columns with reasonable cardinality
-        for col in categorical_cols[:3]:  # Limit to 3 categorical charts
-            unique_count = self.df[col].nunique()
-            if 2 <= unique_count <= 20:  # Only if reasonable number of categories
-                self._generate_bar_chart(col)
-        
-        # Note: Pairplot will be generated separately by AI column selection
-        
+
+        for col_info in columns_info:
+            col = col_info["name"]
+
+            if col not in categorical_cols:
+                continue
+
+            if col_info["unique"] > 30:
+                continue
+            
+            if col_info["unique"] < 2:
+                continue
+
+            self._generate_bar_chart(col)
+
+        for col in datetime_cols:
+            if len(numeric_cols) > 0:
+                self._generate_line_plot(col, numeric_cols[0])
+
         return self.charts
+
     
     def generate_on_demand_charts(self, x_axis=None, y_axis=None, chart_types=None):
         if not chart_types or chart_types == ['all']:
@@ -322,7 +340,6 @@ class ChartGenerator:
                 
         elif x_axis or y_axis:
             col = x_axis or y_axis
-            
             if pd.api.types.is_numeric_dtype(self.df[col]):
                 chart_types = ['histogram', 'boxplot', 'distribution']
             else:

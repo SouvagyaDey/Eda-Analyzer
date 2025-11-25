@@ -445,9 +445,6 @@ const Dashboard = () => {
                             />
                             <span className="plot-type-name">
                               {plot.name}
-                              {(plot.id === 'correlation_heatmap' || plot.id === 'pairplot' || plot.id === 'missing_values') && 
-                                <span className="plot-info-icon">ⓘ</span>
-                              }
                             </span>
                           </label>
                         ))}
